@@ -70,7 +70,7 @@ def stop_connection(conn_name=GENERIC_CONNECTION_NAME):
 
 
 #------------------------------------------------------------------------------
-# Return a list of available SSIDs and their security type, 
+# Return a list of available SSIDs and their security type,
 # or [] for none available or error.
 def get_list_of_access_points():
     # bit flags we use when decoding what we get back from NetMan for each AP
@@ -87,14 +87,14 @@ def get_list_of_access_points():
             continue
         for ap in dev.GetAccessPoints():
 
-            # Get Flags, WpaFlags and RsnFlags, all are bit OR'd combinations 
+            # Get Flags, WpaFlags and RsnFlags, all are bit OR'd combinations
             # of the NM_802_11_AP_SEC_* bit flags.
             # https://developer.gnome.org/NetworkManager/1.2/nm-dbus-types.html#NM80211ApSecurityFlags
 
             security = NM_SECURITY_NONE
 
             # Based on a subset of the flag settings we can determine which
-            # type of security this AP uses.  
+            # type of security this AP uses.
             # We can also determine what input we need from the user to connect to
             # any given AP (required for our dynamic UI form).
             if ap.Flags & NetworkManager.NM_802_11_AP_FLAGS_PRIVACY and \
@@ -118,16 +118,16 @@ def get_list_of_access_points():
             security_str = ''
             if security == NM_SECURITY_NONE:
                 security_str = 'NONE'
-    
+
             if security & NM_SECURITY_WEP:
                 security_str = 'WEP'
-    
+
             if security & NM_SECURITY_WPA:
                 security_str = 'WPA'
-    
+
             if security & NM_SECURITY_WPA2:
                 security_str = 'WPA2'
-    
+
             if security & NM_SECURITY_ENTERPRISE:
                 security_str = 'ENTERPRISE'
 
@@ -138,7 +138,7 @@ def get_list_of_access_points():
                 continue
 
             # Don't add other PFC's to the list!
-            if ap.Ssid.startswith('PFC_EDU-'):
+            if ap.Ssid.startswith('bil-br-'):
                 continue
 
             ssids.append(entry)
@@ -153,7 +153,10 @@ def get_list_of_access_points():
 #------------------------------------------------------------------------------
 # Get hotspot SSID name.
 def get_hotspot_SSID():
-    return 'PFC_EDU-'+os.getenv('RESIN_DEVICE_NAME_AT_INIT','aged-cheese')
+    ssid = "Blue Iris Labs Border Router"
+    with open('/etc/hostname') as f:
+        ssid = f.read().strip()
+    return ssid
 
 
 #------------------------------------------------------------------------------
@@ -196,7 +199,7 @@ def connect_to_AP(conn_type=None, conn_name=GENERIC_CONNECTION_NAME, \
                            'interface-name': 'wlan0',
                            'type': '802-11-wireless',
                            'uuid': str(uuid.uuid4())},
-            'ipv4': {'address-data': 
+            'ipv4': {'address-data':
                         [{'address': '192.168.42.1', 'prefix': 24}],
                      'addresses': [['192.168.42.1', 24, '0.0.0.0']],
                      'method': 'manual'},
@@ -211,7 +214,7 @@ def connect_to_AP(conn_type=None, conn_name=GENERIC_CONNECTION_NAME, \
             '802-11-wireless': {'mode': 'infrastructure',
                                 'security': '802-11-wireless-security',
                                 'ssid': ssid},
-            '802-11-wireless-security': 
+            '802-11-wireless-security':
                 {'auth-alg': 'open', 'key-mgmt': 'wpa-eap'},
             '802-1x': {'eap': ['peap'],
                        'identity': username,
@@ -240,7 +243,7 @@ def connect_to_AP(conn_type=None, conn_name=GENERIC_CONNECTION_NAME, \
             '802-11-wireless': {'mode': 'infrastructure',
                                 'security': '802-11-wireless-security',
                                 'ssid': ssid},
-            '802-11-wireless-security': 
+            '802-11-wireless-security':
                 {'key-mgmt': 'wpa-psk', 'psk': password},
             'connection': {'id': conn_name,
                         'type': '802-11-wireless',
@@ -256,15 +259,15 @@ def connect_to_AP(conn_type=None, conn_name=GENERIC_CONNECTION_NAME, \
             conn_str = 'HOTSPOT'
 
         if conn_type == CONN_TYPE_SEC_NONE:
-            conn_dict = none_dict 
+            conn_dict = none_dict
             conn_str = 'OPEN'
 
         if conn_type == CONN_TYPE_SEC_PASSWORD:
-            conn_dict = passwd_dict 
+            conn_dict = passwd_dict
             conn_str = 'WEP/WPA/WPA2'
 
         if conn_type == CONN_TYPE_SEC_ENTERPRISE:
-            conn_dict = enterprise_dict 
+            conn_dict = enterprise_dict
             conn_str = 'ENTERPRISE'
 
         if conn_dict is None:

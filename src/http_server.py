@@ -4,6 +4,7 @@ import os, getopt, sys, json, atexit
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import parse_qs
 from io import BytesIO
+from threading import Timer
 
 # Local modules
 import netman
@@ -22,6 +23,8 @@ def cleanup():
     dnsmasq.stop()
     netman.stop_hotspot()
 
+def activity_timeout(httpd):
+    httpd.shutdown()
 
 #------------------------------------------------------------------------------
 # A custom http server class in which we can set the default path it serves
@@ -54,7 +57,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             print(f'do_GET {self.path}')
 
             # Handle the hotspot starting and a computer connecting to it,
-            # we have to return a redirect to the gateway to get the 
+            # we have to return a redirect to the gateway to get the
             # captured portal to show up.
             if '/hotspot-detect.html' == self.path:
                 self.send_response(301) # redirect
@@ -88,11 +91,11 @@ def RequestHandlerClassFactory(address, ssids, rcode):
                 ssids = self.ssids # passed in to the class factory
                 """ map whatever we get from net man to our constants:
                 Security:
-                    NONE         
-                    HIDDEN         
-                    WEP         
-                    WPA        
-                    WPA2      
+                    NONE
+                    HIDDEN
+                    WEP
+                    WPA
+                    WPA2
                     ENTERPRISE
                 Required user input (from UI form):
                     NONE                   - No input requried.
@@ -109,7 +112,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             if '/bag' == self.path:
                 sys.exit()
 
-            # All other requests are handled by the server which vends files 
+            # All other requests are handled by the server which vends files
             # from the ui_path we were initialized with.
             super().do_GET()
 
@@ -137,18 +140,18 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             ssid = fields[FORM_SSID][0]
             password = None
             username = None
-            if FORM_HIDDEN_SSID in fields: 
+            if FORM_HIDDEN_SSID in fields:
                 ssid = fields[FORM_HIDDEN_SSID][0] # override with hidden name
-            if FORM_USERNAME in fields: 
-                username = fields[FORM_USERNAME][0] 
-            if FORM_PASSWORD in fields: 
-                password = fields[FORM_PASSWORD][0] 
+            if FORM_USERNAME in fields:
+                username = fields[FORM_USERNAME][0]
+            if FORM_PASSWORD in fields:
+                password = fields[FORM_PASSWORD][0]
 
             # Look up the ssid in the list we sent, to find out its security
             # type for the new connection we have to make
             conn_type = netman.CONN_TYPE_SEC_NONE # Open, no auth AP
 
-            if FORM_HIDDEN_SSID in fields: 
+            if FORM_HIDDEN_SSID in fields:
                 conn_type = netman.CONN_TYPE_SEC_PASSWORD # Assumption...
 
             for s in self.ssids:
@@ -156,7 +159,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
                     if s['security'] == "ENTERPRISE":
                         conn_type = netman.CONN_TYPE_SEC_ENTERPRISE
                     elif s['security'] == "NONE":
-                        conn_type = netman.CONN_TYPE_SEC_NONE 
+                        conn_type = netman.CONN_TYPE_SEC_NONE
                     else:
                         # all others need a password
                         conn_type = netman.CONN_TYPE_SEC_PASSWORD
@@ -186,7 +189,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
                 self.ssids = netman.get_list_of_access_points()
 
                 # Start the hotspot again
-                netman.start_hotspot() 
+                netman.start_hotspot()
 
     return  MyHTTPReqHandler # the class our factory just created.
 
@@ -204,7 +207,7 @@ def main(address, port, ui_path, rcode, delete_connections):
     #    print('Already connected to the internet, nothing to do, exiting.')
     #    sys.exit()
 
-    # Get list of available AP from net man.  
+    # Get list of available AP from net man.
     # Must do this AFTER deleting any existing connections (above),
     # and BEFORE starting our hotspot (or the hotspot will be the only thing
     # in the list).
@@ -223,7 +226,7 @@ def main(address, port, ui_path, rcode, delete_connections):
     web_dir = os.path.join(os.path.dirname(__file__), ui_path)
     print(f'HTTP serving directory: {web_dir} on {address}:{port}')
 
-    # Change to this directory so the HTTPServer returns the index.html in it 
+    # Change to this directory so the HTTPServer returns the index.html in it
     # by default when it gets a GET.
     os.chdir(web_dir)
 
@@ -233,12 +236,16 @@ def main(address, port, ui_path, rcode, delete_connections):
     # Custom request handler class (so we can pass in our own args)
     MyRequestHandlerClass = RequestHandlerClassFactory(address, ssids, rcode)
 
-    # Start an HTTP server to serve the content in the ui dir and handle the 
+    # Start an HTTP server to serve the content in the ui dir and handle the
     # POST request in the handler class.
     print(f'Waiting for a connection to our hotspot {netman.get_hotspot_SSID()} ...')
     httpd = MyHTTPServer(web_dir, server_address, MyRequestHandlerClass)
     try:
+        activity_timer = Timer(300, activity_timeout, httpd)
+        activity_timer.start()
         httpd.serve_forever()
+        dnsmasq.stop()
+        netman.stop_hotspot()
     except KeyboardInterrupt:
         dnsmasq.stop()
         netman.stop_hotspot()
