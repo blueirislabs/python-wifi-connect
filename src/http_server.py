@@ -166,7 +166,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             netman.stop_hotspot()
 
             # Connect to the user's selected AP
-            success = netman.connect_to_AP(conn_type=conn_type, ssid=ssid, \
+            success = netman.connect_to_AP(conn_type=conn_type, conn_name=ssid, ssid=ssid, \
                     username=username, password=password)
 
             if success:
@@ -200,9 +200,9 @@ def main(address, port, ui_path, rcode, delete_connections):
         netman.delete_all_wifi_connections()
 
     # Check if we are already connected, if so we are done.
-    if netman.have_active_internet_connection():
-        print('Already connected to the internet, nothing to do, exiting.')
-        sys.exit()
+    #if netman.have_active_internet_connection():
+    #    print('Already connected to the internet, nothing to do, exiting.')
+    #    sys.exit()
 
     # Get list of available AP from net man.  
     # Must do this AFTER deleting any existing connections (above),
