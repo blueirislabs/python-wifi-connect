@@ -10,6 +10,8 @@ from threading import Timer
 import netman
 import dnsmasq
 
+activity_timer = None
+
 # Defaults
 ADDRESS = '192.168.42.1'
 PORT = 80
@@ -20,6 +22,7 @@ UI_PATH = '../ui'
 # called at exit
 def cleanup():
     print("Cleaning up prior to exit.")
+    activity_timer.cancel()
     dnsmasq.stop()
     netman.stop_hotspot()
 
@@ -110,6 +113,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             # Not sure if this is just OSX hitting the captured portal,
             # but we need to exit if we get it.
             if '/bag' == self.path:
+                cleanup()
                 sys.exit()
 
             # All other requests are handled by the server which vends files
@@ -181,6 +185,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             # Handle success or failure of the new connection
             if success:
                 print(f'Connected!  Exiting app.')
+                cleanup()
                 sys.exit()
             else:
                 print(f'Connection failed, restarting the hotspot.')
@@ -197,7 +202,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
 #------------------------------------------------------------------------------
 # Create the hotspot, start dnsmasq, start the HTTP server.
 def main(address, port, ui_path, rcode, delete_connections):
-
+    global activity_timer
     # See if caller wants to delete all existing connections first
     if delete_connections:
         netman.delete_all_wifi_connections()
@@ -216,6 +221,7 @@ def main(address, port, ui_path, rcode, delete_connections):
     # Start the hotspot
     if not netman.start_hotspot():
         print('Error starting hotspot, exiting.')
+        cleanup()
         sys.exit(1)
 
     # Start dnsmasq (to advertise us as a router so captured portal pops up
@@ -264,7 +270,7 @@ def string_to_int(s, default):
 #------------------------------------------------------------------------------
 # Entry point and command line argument processing.
 if __name__ == "__main__":
-    atexit.register(cleanup)
+    #atexit.register(cleanup)
 
     address = ADDRESS
     port = PORT
@@ -285,11 +291,13 @@ f'  -h Show help.\n'
         opts, args = getopt.getopt(sys.argv[1:], "a:p:u:r:dh")
     except getopt.GetoptError:
         print(usage)
+        cleanup()
         sys.exit(2)
 
     for opt, arg in opts:
         if opt == '-h':
             print(usage)
+            cleanup()
             sys.exit()
 
         elif opt in ("-d"):
