@@ -22,11 +22,13 @@ UI_PATH = '../ui'
 # called at exit
 def cleanup():
     print("Cleaning up prior to exit.")
-    activity_timer.cancel()
+    if(activity_timer):
+        activity_timer.cancel()
     dnsmasq.stop()
     netman.stop_hotspot()
 
 def activity_timeout(httpd):
+    print("Activity timeout, quitting application")
     httpd.shutdown()
 
 #------------------------------------------------------------------------------
@@ -247,7 +249,7 @@ def main(address, port, ui_path, rcode, delete_connections):
     print(f'Waiting for a connection to our hotspot {netman.get_hotspot_SSID()} ...')
     httpd = MyHTTPServer(web_dir, server_address, MyRequestHandlerClass)
     try:
-        activity_timer = Timer(300, activity_timeout, httpd)
+        activity_timer = Timer(300, activity_timeout, [httpd])
         activity_timer.start()
         httpd.serve_forever()
         dnsmasq.stop()
