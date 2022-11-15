@@ -5,6 +5,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import parse_qs
 from io import BytesIO
 from threading import Timer
+import signal
 
 # Local modules
 import netman
@@ -17,9 +18,18 @@ ADDRESS = '192.168.42.1'
 PORT = 80
 UI_PATH = '../ui'
 
-
 #------------------------------------------------------------------------------
 # called at exit
+def signal_handler(sig, frame):
+    print('exit due to ', str(sig))
+    cleanup()
+    exit(0)
+
+catchable_sigs = set(signal.Signals) - {signal.SIGCHLD, signal.SIGKILL, signal.SIGSTOP}
+for sig in catchable_sigs:
+    signal.signal(sig, signal_handler)
+
+
 def cleanup():
     print("Cleaning up prior to exit.")
     if(activity_timer):
