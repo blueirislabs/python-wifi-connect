@@ -1,3 +1,3 @@
 dbus-python==1.2.18
-python-networkmanager @ git+https://github.com/blueirislabs/python-networkmanager@be7e8ba
+python-networkmanager @ git+https://github.com/blueirislabs/python-networkmanager@a9003551
 
