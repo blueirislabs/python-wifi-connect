@@ -179,9 +179,9 @@ CONN_TYPE_SEC_ENTERPRISE = 'ENTERPRISE' # MIT SECURE
 # Generic connect to the user selected AP function.
 # Returns True for success, or False.
 def connect_to_AP(conn_type=None, conn_name=GENERIC_CONNECTION_NAME, \
-        ssid=None, username=None, password=None):
+        ssid=None, username=None, password=None, mac_address=None):
 
-    print(f"connect_to_AP conn_type={conn_type} conn_name={conn_name} ssid={ssid} username={username} password={password}")
+    print(f"connect_to_AP conn_type={conn_type} conn_name={conn_name} ssid={ssid} username={username} password={password} mac={mac_address}")
 
     if conn_type is None or ssid is None:
         print(f'connect_to_AP() Error: Missing args conn_type or ssid')
@@ -273,6 +273,10 @@ def connect_to_AP(conn_type=None, conn_name=GENERIC_CONNECTION_NAME, \
         if conn_dict is None:
             print(f'connect_to_AP() Error: Invalid conn_type="{conn_type}"')
             return False
+
+        # set static mac address
+        if mac_address is not None:
+            conn_dict['802-11-wireless']['cloned-mac-address'] = mac_address
 
         #print(f"new connection {conn_dict} type={conn_str}")
 

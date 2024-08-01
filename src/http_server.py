@@ -54,7 +54,7 @@ class MyHTTPServer(HTTPServer):
 # A custom http request handler class factory.
 # Handle the GET and POST requests from the UI form and JS.
 # The class factory allows us to pass custom arguments to the handler.
-def RequestHandlerClassFactory(address, ssids, rcode):
+def RequestHandlerClassFactory(address, ssids, mac_address, rcode):
 
     class MyHTTPReqHandler(SimpleHTTPRequestHandler):
 
@@ -63,6 +63,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
             # our super class will call do_GET().
             self.address = address
             self.ssids = ssids
+            self.mac_address = mac_address
             self.rcode = rcode
             super(MyHTTPReqHandler, self).__init__(*args, **kwargs)
 
@@ -186,7 +187,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
 
             # Connect to the user's selected AP
             success = netman.connect_to_AP(conn_type=conn_type, conn_name=ssid, ssid=ssid, \
-                    username=username, password=password)
+                    username=username, password=password, mac_address=self.mac_address)
 
             if success:
                 response.write(b'OK\n')
@@ -213,7 +214,7 @@ def RequestHandlerClassFactory(address, ssids, rcode):
 
 #------------------------------------------------------------------------------
 # Create the hotspot, start dnsmasq, start the HTTP server.
-def main(address, port, ui_path, rcode, delete_connections):
+def main(address, port, mac_address, ui_path, rcode, delete_connections):
     global activity_timer
     # See if caller wants to delete all existing connections first
     if delete_connections:
@@ -252,7 +253,7 @@ def main(address, port, ui_path, rcode, delete_connections):
     server_address = (address, port)
 
     # Custom request handler class (so we can pass in our own args)
-    MyRequestHandlerClass = RequestHandlerClassFactory(address, ssids, rcode)
+    MyRequestHandlerClass = RequestHandlerClassFactory(address, ssids, mac_address, rcode)
 
     # Start an HTTP server to serve the content in the ui dir and handle the
     # POST request in the handler class.
@@ -287,6 +288,7 @@ if __name__ == "__main__":
     address = ADDRESS
     port = PORT
     ui_path = UI_PATH
+    mac_address = None
     delete_connections = False
     rcode = ''
 
@@ -295,12 +297,13 @@ f'Command line args: \n'\
 f'  -a <HTTP server address>     Default: {address} \n'\
 f'  -p <HTTP server port>        Default: {port} \n'\
 f'  -u <UI directory to serve>   Default: "{ui_path}" \n'\
+f'  -m <Mac address>             Default: "{mac_address}" \n'\
 f'  -d Delete Connections First  Default: {delete_connections} \n'\
 f'  -r Device Registration Code  Default: "" \n'\
 f'  -h Show help.\n'
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "a:p:u:r:dh")
+        opts, args = getopt.getopt(sys.argv[1:], "a:p:u:m:r:dh")
     except getopt.GetoptError:
         print(usage)
         cleanup()
@@ -327,11 +330,14 @@ f'  -h Show help.\n'
         elif opt in ("-u"):
             ui_path = arg
 
+        elif opt in ("-m"):
+            mac_address = arg
+
     print(f'Address={address}')
     print(f'Port={port}')
     print(f'UI path={ui_path}')
     print(f'Device registration code={rcode}')
     print(f'Delete Connections={delete_connections}')
-    main(address, port, ui_path, rcode, delete_connections)
+    main(address, port, mac_address, ui_path, rcode, delete_connections)
 
 
