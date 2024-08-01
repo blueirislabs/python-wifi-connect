@@ -1,3 +1,4 @@
 dbus-python==1.2.18
+psutil==6.0.0
 python-networkmanager @ git+https://github.com/blueirislabs/python-networkmanager@a9003551
 
